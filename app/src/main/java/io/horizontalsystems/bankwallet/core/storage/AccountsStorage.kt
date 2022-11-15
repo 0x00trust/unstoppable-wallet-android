@@ -1,8 +1,6 @@
 package io.horizontalsystems.bankwallet.core.storage
 
 import io.horizontalsystems.bankwallet.core.IAccountsStorage
-import io.horizontalsystems.bankwallet.core.hexToByteArray
-import io.horizontalsystems.bankwallet.core.toRawHexString
 import io.horizontalsystems.bankwallet.entities.Account
 import io.horizontalsystems.bankwallet.entities.AccountOrigin
 import io.horizontalsystems.bankwallet.entities.AccountType
@@ -20,6 +18,7 @@ class AccountsStorage(appDatabase: AppDatabase) : IAccountsStorage {
         private const val MNEMONIC = "mnemonic"
         private const val PRIVATE_KEY = "private_key"
         private const val ADDRESS = "address"
+        private const val HD_EXTENDED_LEY = "hd_extended_key"
     }
 
     override var activeAccountId: String?
@@ -41,8 +40,9 @@ class AccountsStorage(appDatabase: AppDatabase) : IAccountsStorage {
                     try {
                         val accountType = when (record.type) {
                             MNEMONIC -> AccountType.Mnemonic(record.words!!.list, record.passphrase?.value ?: "")
-                            PRIVATE_KEY -> AccountType.PrivateKey(record.key!!.value.hexToByteArray())
-                            ADDRESS -> AccountType.Address(record.key!!.value)
+                            PRIVATE_KEY -> AccountType.EvmPrivateKey(record.key!!.value.toBigInteger())
+                            ADDRESS -> AccountType.EvmAddress(record.key!!.value)
+                            HD_EXTENDED_LEY -> AccountType.HdExtendedKey(record.key!!.value)
                             else -> null
                         }
                         Account(record.id, record.name, accountType!!, AccountOrigin.valueOf(record.origin), record.isBackedUp)
@@ -92,13 +92,17 @@ class AccountsStorage(appDatabase: AppDatabase) : IAccountsStorage {
                 passphrase = SecretString(account.type.passphrase)
                 accountType = MNEMONIC
             }
-            is AccountType.PrivateKey -> {
-                key = SecretString(account.type.key.toRawHexString())
+            is AccountType.EvmPrivateKey -> {
+                key = SecretString(account.type.key.toString())
                 accountType = PRIVATE_KEY
             }
-            is AccountType.Address -> {
+            is AccountType.EvmAddress -> {
                 key = SecretString(account.type.address)
                 accountType = ADDRESS
+            }
+            is AccountType.HdExtendedKey -> {
+                key = SecretString(account.type.keySerialized)
+                accountType = HD_EXTENDED_LEY
             }
             else -> throw Exception("Unsupported AccountType: ${account.type}")
         }

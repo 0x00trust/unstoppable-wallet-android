@@ -30,6 +30,7 @@ object UniswapModule {
         private val service: UniswapService
     ) : ViewModelProvider.Factory {
 
+        @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             return when (modelClass) {
                 SwapAllowanceViewModel::class.java -> {
@@ -49,7 +50,7 @@ object UniswapModule {
         dex: SwapMainModule.Dex
     ) : ViewModelProvider.Factory {
 
-        private val evmKit: EthereumKit by lazy { dex.blockchain.evmKitWrapper?.evmKit!! }
+        private val evmKit: EthereumKit by lazy { App.evmBlockchainManager.getEvmKitManager(dex.blockchainType).evmKitWrapper?.evmKit!! }
         private val uniswapKit by lazy { UniswapKit.getInstance(evmKit) }
         private val uniswapProvider by lazy { UniswapProvider(uniswapKit) }
         private val allowanceService by lazy {
